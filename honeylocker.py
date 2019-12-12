@@ -13,7 +13,8 @@ def PicPath():
 
 def Bust():
   # os.system("say 'Enemy input detected'")
-  os.system("streamer -f jpeg -o " + PicPath() + " 2> /dev/null")
+  # os.system("streamer -f jpeg -o " + PicPath() + " 2> /dev/null")
+  os.system("ffmpeg -f video4linux2 -i /dev/video0 -vframes 1 " + PicPath() + " 2> /dev/null")
   os.system("xdg-screensaver lock")
   exit();
 
