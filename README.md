@@ -4,7 +4,7 @@ A simple python script that is a honeypot screen locker. It locks the screen and
 ## setup
 
 ```
-sudo apt install python3 python3-pip
+sudo apt install python3 python3-pip ffmpeg
 pip3 install pyxhook
 cd /usr/local/bin
 sudo wget https://raw.githubusercontent.com/ChillerDragon/HoneyLocker/master/honeylocker.py
