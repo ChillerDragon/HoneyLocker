@@ -53,7 +53,8 @@ def CheckPasswd(event):
   global mode
   if event.WindowProcName != 'slack':
       return True
-  history.append(event.Key.lower())
+  if not event.Key.lower().startswith('shift'):
+      history.append(event.Key.lower())
   print(f"index: {index} history: {history}")
   if mode == 'password':
     if len(password) == index:
