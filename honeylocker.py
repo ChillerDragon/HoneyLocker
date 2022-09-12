@@ -11,6 +11,7 @@ import os
 import distutils.spawn
 import time
 import sys
+import itertools
 
 import lib.pyxhook.pyxhook
 
@@ -19,6 +20,7 @@ MODE = 'password'
 BLOCKED = []
 index = 0
 MAX_HISTORY_LEN = 1024
+ARG_STRICT_MATCH = False
 history = []
 
 def show_help():
@@ -29,6 +31,7 @@ def show_help():
     print('options:')
     print('  --block|-b     use blacklist mode instead of whitelist')
     print('  --cake|-c      default cake blacklist')
+    print('  --strict|-s    enable strict match by default "cake" matches "caaake"')
 
 for arg in sys.argv[1:]:
     if arg in ('--help', 'help', '-h'):
@@ -40,6 +43,8 @@ for arg in sys.argv[1:]:
     elif arg in ('--block', '-b'):
         MODE = 'blacklist'
         PASSWORD = None
+    elif arg in ('--strict', '-s'):
+        ARG_STRICT_MATCH = True
     elif arg.startswith('-'):
         print(f"Error: invalid arguemnt '{arg}'")
         sys.exit()
@@ -111,8 +116,11 @@ def check_blacklist():
     Check if the currently typed key
     forms a word that is blacklisted
     """
+    hist_str = ''.join(history)
+    if not ARG_STRICT_MATCH:
+        hist_str = ''.join(ch for ch, _ in itertools.groupby(hist_str))
     for block in BLOCKED:
-        if block in ''.join(history):
+        if block in hist_str:
             print(f"found blocked word {block}")
             return False
         print(f"{block} not found in {''.join(history)}")
