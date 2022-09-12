@@ -15,7 +15,8 @@ import sys
 import lib.pyxhook.pyxhook
 
 PASSWORD = None
-BLOCKED = ["cake", "c a k e", "kuchen", "bring", ":cak", ":cup"]
+MODE = 'password'
+BLOCKED = []
 index = 0
 MAX_HISTORY_LEN = 1024
 history = []
@@ -27,17 +28,23 @@ def show_help():
     print('usage: honeylocker.py [OPTION] [PASSWORD]')
     print('options:')
     print('  --block|-b     use blacklist mode instead of whitelist')
+    print('  --cake|-c      default cake blacklist')
 
-for arg in sys.argv:
+for arg in sys.argv[1:]:
     if arg in ('--help', 'help', '-h'):
         show_help()
         sys.exit()
+    elif arg in ('--cake', '-c'):
+        MODE = 'blacklist'
+        BLOCKED = ["cake", "c a k e", "kuchen", "bring", ":cak", ":cup"]
     elif arg in ('--block', '-b'):
         MODE = 'blacklist'
         PASSWORD = None
     elif arg.startswith('-'):
         print(f"Error: invalid arguemnt '{arg}'")
         sys.exit()
+    elif MODE == 'blacklist':
+        BLOCKED.append(arg)
     else:
         PASSWORD = arg
 
@@ -47,9 +54,19 @@ if PASSWORD:
 
 print(f"[*] Started in mode {MODE}")
 if MODE == 'password':
+    if not PASSWORD:
+        print("Error: password can not be empty")
+        sys.exit(1)
     print(f"[*]   password: {PASSWORD}")
+    print('[*]   typing or clicking anything other than the password will lock the screen')
 else:
+    if len(BLOCKED) == 0:
+        print("Error: block list can not be empty")
+        print("       specify blocked words as space seperated arguments")
+        print("       or use --cake flag for the cake list")
+        sys.exit(1)
     print(f"[*]   blacklist: {BLOCKED}")
+    print('[*]   typing on of those words into slack will lock your screen')
 
 def lock_screen(dry = False):
     """
@@ -101,39 +118,38 @@ def check_blacklist():
         print(f"{block} not found in {''.join(history)}")
     return True
 
-def check_passwd(event):
+def check_passwd(key):
     """
     Check if the currently typed key
     is part of the unlock password
     or a intrusiom
     """
     global index
-    if MODE == 'password':
-        if len(PASSWORD) == index:
-            sys.exit() # correc passwd
-        if PASSWORD[index] == event.Key:
-            index += 1
-            return True
-    return True
+    if len(PASSWORD) == index:
+        sys.exit() # correct passwd
+    if PASSWORD[index] == key:
+        index += 1
+        return True
+    return False
 
 def on_key_press(event):
     """
     handle all keypresses
     """
     global history
-    if not event.Key.lower().startswith('shift'):
-        key = event.Key.lower()
+    key = event.Key.lower()
+    if not key.startswith('shift'):
         if key == 'space':
             key = ' '
-        history.append(event.Key.lower())
+        history.append(key)
         if len(history) > 2:
             history = history[len(history)-MAX_HISTORY_LEN:]
-    if event.WindowProcName != 'slack':
-        return
     if MODE == 'password':
-        if check_passwd(event):
+        if check_passwd(key):
             return
     else:
+        if event.WindowProcName != 'slack':
+            return
         if check_blacklist():
             return
     print("key pressed: " + event.Key)
