@@ -1,112 +1,175 @@
 #!/usr/bin/env python3
+"""
+honeylocker.py [OPTION] [PASSWORD]
+
+Examples:
+    ./honeylocker.py --block
+    ./honeylocker.py "my password to unlock"
+"""
+
 import os
-import lib.pyxhook.pyxhook
+import distutils.spawn
 import time
-import json
 import sys
 
-password = None
-blocked = ["cake", "c a k e", "kuchen", "bring", ":cak", ":cup"]
+import lib.pyxhook.pyxhook
+
+PASSWORD = None
+BLOCKED = ["cake", "c a k e", "kuchen", "bring", ":cak", ":cup"]
 index = 0
 MAX_HISTORY_LEN = 1024
 history = []
 
 def show_help():
+    """
+    print help text
+    """
     print('usage: honeylocker.py [OPTION] [PASSWORD]')
     print('options:')
     print('  --block|-b     use blacklist mode instead of whitelist')
 
 for arg in sys.argv:
-    if arg == '--help' or arg == 'help' or arg == '-h':
+    if arg in ('--help', 'help', '-h'):
         show_help()
-        exit()
-    elif arg == '--block' or arg == '-b':
-        mode = 'blacklist'
-        password = None
+        sys.exit()
+    elif arg in ('--block', '-b'):
+        MODE = 'blacklist'
+        PASSWORD = None
     elif arg.startswith('-'):
         print(f"Error: invalid arguemnt '{arg}'")
-        exit()
+        sys.exit()
     else:
-        password = arg
+        PASSWORD = arg
 
-mode = 'blacklist'
-if password:
-    mode = 'password'
+MODE = 'blacklist'
+if PASSWORD:
+    MODE = 'password'
+
+print(f"[*] Started in mode {MODE}")
+if MODE == 'password':
+    print(f"[*]   password: {PASSWORD}")
+else:
+    print(f"[*]   blacklist: {BLOCKED}")
+
+def lock_screen(dry = False):
+    """
+    Locks the screen. In dry mode only checks if it is possible.
+    """
+    lock_executables = ['xdg-screensaver']
+    found_lock = False
+    for lock_executable in lock_executables:
+        if distutils.spawn.find_executable(lock_executable):
+            found_lock = True
+            break
+    if not found_lock:
+        print("Error: executable to lock the screen not found")
+        print("       expected one of these in path:")
+        print("       " + str(lock_executables))
+        sys.exit(1)
+    if not dry:
+        os.system("xdg-screensaver lock")
 
 # Use a function instead a variable to get the time of the pic shot
 # and not of the program launch
-def PicPath():
-  return "~/Desktop/busted_" + time.strftime("_%I_%M_%S") + ".jpeg"
+def pic_path():
+    """
+    generate filepath for webpack photo including timestamp
+    """
+    return "~/Desktop/busted_" + time.strftime("_%I_%M_%S") + ".jpeg"
 
-def Bust():
-  # os.system("say 'Enemy input detected'")
-  # os.system("streamer -f jpeg -o " + PicPath() + " 2> /dev/null")
-  os.system("ffmpeg -f video4linux2 -i /dev/video0 -vframes 1 " + PicPath() + " 2> /dev/null")
-  os.system("xdg-screensaver lock")
-  exit();
+def bust():
+    """
+    Takes a webcam image and locks the screen
 
-def CheckPasswd(event):
-  global index
-  global history
-  global MAX_HISTORY_LEN
-  global blocked
-  global password
-  global mode
-  if event.WindowProcName != 'slack':
-      return True
-  if not event.Key.lower().startswith('shift'):
-      key = event.Key.lower()
-      if key == 'space':
-          key = ' '
-      history.append(event.Key.lower())
-      if len(history) > 2:
-          history = history[len(history)-MAX_HISTORY_LEN:]
-  print(f"index: {index} history: {history}")
-  if mode == 'password':
-    if len(password) == index:
-      exit() # correc passwd
-    if password[index] == event.Key:
-      index += 1
-      return True
-    return True
-  else:
-    for block in blocked:
+    should be called when a intruder is detected
+    """
+    # os.system("say 'Enemy input detected'")
+    # os.system("streamer -f jpeg -o " + PicPath() + " 2> /dev/null")
+    os.system("ffmpeg -f video4linux2 -i /dev/video0 -vframes 1 " + pic_path() + " 2> /dev/null")
+    lock_screen()
+    sys.exit()
+
+def check_blacklist():
+    """
+    Check if the currently typed key
+    forms a word that is blacklisted
+    """
+    for block in BLOCKED:
         if block in ''.join(history):
             print(f"found blocked word {block}")
             return False
-        else:
-            print(f"{block} not found in {''.join(history)}")
-    # no blocked
+        print(f"{block} not found in {''.join(history)}")
     return True
-  return False
 
-def OnKeyPress(event):
-  global pic_path 
-  if CheckPasswd(event):
-    return
-  print("key pressed: " + event.Key)
-  Bust()
+def check_passwd(event):
+    """
+    Check if the currently typed key
+    is part of the unlock password
+    or a intrusiom
+    """
+    global index
+    if MODE == 'password':
+        if len(PASSWORD) == index:
+            sys.exit() # correc passwd
+        if PASSWORD[index] == event.Key:
+            index += 1
+            return True
+    return True
 
-def OnMouseClick(event):
-  global mode
-  if mode == 'blacklist':
-      return
-  # rightclick blocks the screen lock
-  # -> only lock on left click
-  if (event.MessageName != "mouse left  down"):
-    return
-  Bust()
- 
+def on_key_press(event):
+    """
+    handle all keypresses
+    """
+    global history
+    if not event.Key.lower().startswith('shift'):
+        key = event.Key.lower()
+        if key == 'space':
+            key = ' '
+        history.append(event.Key.lower())
+        if len(history) > 2:
+            history = history[len(history)-MAX_HISTORY_LEN:]
+    if event.WindowProcName != 'slack':
+        return
+    if MODE == 'password':
+        if check_passwd(event):
+            return
+    else:
+        if check_blacklist():
+            return
+    print("key pressed: " + event.Key)
+    bust()
+
+def on_mouse_click(event):
+    """
+    handle all mouse clicks
+    """
+    if MODE == 'blacklist':
+        return
+    # rightclick blocks the screen lock
+    # -> only lock on left click
+    if event.MessageName != "mouse left  down":
+        return
+    bust()
+
+def check_deps():
+    """
+    Check if all needed dependencies are installed
+    """
+    lock_screen(dry = True)
+    if not distutils.spawn.find_executable('ffmpeg'):
+        print('Warning: ffmpeg not found in path')
+        print('         will not take webcam photo')
+
 new_hook = lib.pyxhook.pyxhook.HookManager()
-new_hook.KeyDown = OnKeyPress
-new_hook.MouseAllButtonsDown = OnMouseClick
+new_hook.KeyDown = on_key_press
+new_hook.MouseAllButtonsDown = on_mouse_click
 new_hook.HookKeyboard()
 
 try:
-  new_hook.start()
+    new_hook.start()
 except KeyboardInterrupt:
-  # User cancelled from command line.
-  pass
+    # User cancelled from command line.
+    pass
 except Exception as ex:
-  msg = 'Error while catching events:\n {}'.format(ex)
-  lib.pyxhook.pyxhook.print_err(msg)
+    msg = f"Error while catching events:\n {ex}"
+    print(msg)
