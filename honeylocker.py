@@ -8,6 +8,8 @@ import sys
 password = None
 blocked = ["cake", "c a k e", "kuchen", "bring", ":cak", ":cup"]
 index = 0
+MAX_HISTORY_LEN = 1024
+history = []
 
 def show_help():
     print('usage: honeylocker.py [OPTION] [PASSWORD]')
@@ -43,11 +45,10 @@ def Bust():
   os.system("xdg-screensaver lock")
   exit();
 
-history = []
-
 def CheckPasswd(event):
   global index
   global history
+  global MAX_HISTORY_LEN
   global blocked
   global password
   global mode
@@ -55,6 +56,8 @@ def CheckPasswd(event):
       return True
   if not event.Key.lower().startswith('shift'):
       history.append(event.Key.lower())
+      if len(history) > 2:
+          history = history[len(history)-MAX_HISTORY_LEN:]
   print(f"index: {index} history: {history}")
   if mode == 'password':
     if len(password) == index:
