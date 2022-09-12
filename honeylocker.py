@@ -149,7 +149,11 @@ def on_key_press(event):
     if not key.startswith('shift'):
         if key == 'space':
             key = ' '
-        history.append(key)
+        if key == 'backspace':
+            if len(history) > 0:
+                history = history[:len(history)-1]
+        else:
+            history.append(key)
         if len(history) > 2:
             history = history[len(history)-MAX_HISTORY_LEN:]
     if MODE == 'password':
