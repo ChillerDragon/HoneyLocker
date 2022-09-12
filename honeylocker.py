@@ -2,9 +2,34 @@
 import os
 import pyxhook
 import time
+import json
+import sys
 
-password = ["p", "a", "s", "s", "w", "d"]
+password = None
+blocked = ["cake", "c a k e", "kuchen", "bring", ":cak", ":cup"]
 index = 0
+
+def show_help():
+    print('usage: honeylocker.py [OPTION] [PASSWORD]')
+    print('options:')
+    print('  --block|-b     use blacklist mode instead of whitelist')
+
+for arg in sys.argv:
+    if arg == '--help' or arg == 'help' or arg == '-h':
+        show_help()
+        exit()
+    elif arg == '--block' or arg == '-b':
+        mode = 'blacklist'
+        password = None
+    elif arg.startswith('-'):
+        print(f"Error: invalid arguemnt '{arg}'")
+        exit()
+    else:
+        password = arg
+
+mode = 'blacklist'
+if password:
+    mode = 'password'
 
 # Use a function instead a variable to get the time of the pic shot
 # and not of the program launch
@@ -18,12 +43,33 @@ def Bust():
   os.system("xdg-screensaver lock")
   exit();
 
+history = []
+
 def CheckPasswd(event):
   global index
-  if len(password) == index:
-    exit() # correc passwd
-  if password[index] == event.Key:
-    index += 1
+  global history
+  global blocked
+  global password
+  global mode
+  if event.WindowProcName != 'slack':
+      return True
+  history.append(event.Key.lower())
+  print(f"index: {index} history: {history}")
+  if mode == 'password':
+    if len(password) == index:
+      exit() # correc passwd
+    if password[index] == event.Key:
+      index += 1
+      return True
+    return True
+  else:
+    for block in blocked:
+        if block in ''.join(history):
+            print(f"found blocked word {block}")
+            return False
+        else:
+            print(f"{block} not found in {''.join(history)}")
+    # no blocked
     return True
   return False
 
@@ -35,6 +81,9 @@ def OnKeyPress(event):
   Bust()
 
 def OnMouseClick(event):
+  global mode
+  if mode == 'blacklist':
+      return
   # rightclick blocks the screen lock
   # -> only lock on left click
   if (event.MessageName != "mouse left  down"):
