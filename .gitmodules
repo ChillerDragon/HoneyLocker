@@ -1,0 +1,3 @@
+[submodule "lib/pyxhook"]
+	path = lib/pyxhook
+	url = git@github.com:ChillerDragon/pyxhook.git

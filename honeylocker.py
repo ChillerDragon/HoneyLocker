@@ -1,6 +1,6 @@
 #!/usr/bin/env python3
 import os
-import pyxhook
+import lib.pyxhook.pyxhook
 import time
 import json
 import sys
@@ -90,7 +90,7 @@ def OnMouseClick(event):
     return
   Bust()
  
-new_hook = pyxhook.HookManager()
+new_hook = lib.pyxhook.pyxhook.HookManager()
 new_hook.KeyDown = OnKeyPress
 new_hook.MouseAllButtonsDown = OnMouseClick
 new_hook.HookKeyboard()
@@ -102,4 +102,4 @@ except KeyboardInterrupt:
   pass
 except Exception as ex:
   msg = 'Error while catching events:\n {}'.format(ex)
-  pyxhook.print_err(msg)
+  lib.pyxhook.pyxhook.print_err(msg)
