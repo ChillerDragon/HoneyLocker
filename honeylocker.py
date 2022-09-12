@@ -55,6 +55,9 @@ def CheckPasswd(event):
   if event.WindowProcName != 'slack':
       return True
   if not event.Key.lower().startswith('shift'):
+      key = event.Key.lower()
+      if key == 'space':
+          key = ' '
       history.append(event.Key.lower())
       if len(history) > 2:
           history = history[len(history)-MAX_HISTORY_LEN:]
