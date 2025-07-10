@@ -160,7 +160,7 @@ def on_key_press(event):
         if check_passwd(key):
             return
     else:
-        if event.WindowProcName != 'slack':
+        if event.WindowProcName not in ['slack', 'chromium']:
             return
         if check_blacklist():
             return
